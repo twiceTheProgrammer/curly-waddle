@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+  </head>
+  <script type="text/tiscript">
+
+        var document = self;
+        document.createElement = function(name) { return new Element(name); };
+
+            Element.attachEvent = function(name,handler) {
+                return this.on(name,handler);
+            };
+            Element.detachEvent = function(name,handler) {
+                return this.off(handler);
+            };
+
+            Element.getContext = function(contextType) {
+                  if(contextType != "2d")
+                    throw String.$([{contextType}] are not supported);
+                  if(!this._cav_ctx)
+                    this._cav_ctx = new CanvasRenderingContext2D(this);
+                  return this._cav_ctx;
+            };
+
+            Element.width = property(val){
+                  get {
+                    if(this._cav_ctx) return this._cav_ctx._width;
+                    var (w,h) = this.box(#dimension);
+                    return w;
+                  }
+            };
+
+          Element.height = property(val){
+              get {
+                  if(this._cav_ctx) return this._cav_ctx._height;
+                  var (w,h) = this.box(#dimension);
+                  return h;
+              }
+          };
+
+/* CanvasRenderingContext2D */
+              class CanvasRenderingContext2D
+              {
+              //constructor
+              function this(el) {
+                var w,h;
+                if(el.parent)
+                {
+                    (w,h) = el.box(#dimension);
+                }
+                else
+                {
+                    w = el.style["width"];
+                    if(w) w = Length.parse();
+                    if(w) w = w.toFloat(#px,1);
+                    h = el.style["height"];
+                    if(h) = Length.parse();
+                    if(h) h = h.toFloat(#px,1);
+                }
+                if(!w) w = 1;
+                if(!h) h = 1;
+                this._width = w;this._height = h;
+                this._img = new Image(w,h,:gfx:{});
+                this._element = el;
+                el.paintBackground = :gfx:this super._onPaint(gfx);
+                el.onSize = ::this super._onSize();
+                this._state = {
+                    fillStyle: null,
+                    strokeStyle: null,
+                    lineWidth: 1,
+                    lineJoin: Graphics.JOIN_MITER,
+                    lineCap: Graphics.CAP_BUTT,
+                    font: "10px sans-serif",
+                    textAlign: Graphics.ALIGN_START,
+                    textBaseline: Graphics.ALIGN_START,
+                    xform: null
+                };
+              }
+function _onPaint(gfx) {
+  gfx.drawImage(this._img,0,0);
+}
+function _onSize() {
+  var (w,h) = el.box(#dimension);
+  this._width = w;this._height = h;
+  if(this._img.width >= w && this._img.height >= h) return;
+  var imgOld = this._img;
+  this._img = new Image(w,h,function(gfx){
+      gfx.drawImage(imgOld,0,0);
+  });
+  imgOld.destroy();
+}
+
+/* Canvas接口适配 */
+var _width = 0;
+var _height = 0;
+var _state = null;
+var _states = null;
+var _path = null;
+
+property width(val) {
+  get
+  {
+      return this._width;
+  }
+}
+property height(val) {
+  get
+  {
+      return this._height;
+  }
+}
+property fillStyle(val) {
+  get
+  {
+      return this._state.fillStyle;
+  }
+  set
+  {
+      if(val && typeof val != #string && typeof val != #color)
+          throw "fillStyle {" + typeof val + "} not supported";
+      if(typeof val == #string)
+          this._state.fillStyle = Color.parse(val);
+      else
+          this._state.fillStyle = val;
+  }
+}
+property strokeStyle(val) {
+  get
+  {
+      return this._state.strokeStyle;
+  }
+  set
+  {
+      if(val && typeof val != #string && typeof val != #color)
+          throw "strokeStyle {" + typeof val + "} not supported";
+      if(typeof val == #string)
+          this._state.strokeStyle = Color.parse(val);
+      else
+          this._state.strokeStyle = val;
+  }
+}
+property lineWidth(val) {
+  get
+  {
+      return this._state.lineWidth;
+  }
+  set
+  {
+      this._state.lineWidth = val;
+  }
+}
+property lineJoin(val) {
+  get
+  {
+      switch(this._state.lineJoin)
+      {
+      case Graphics.JOIN_MITER: return "miter";
+      case Graphics.JOIN_ROUND: return "round";
+      case Graphics.JOIN_BEVEL: return "bevel";
+      default:
+          throw "unknown lineJoin";
+      }
+  }
+  set
+  {
+      switch(val)
+      {
+      case "miter": this._state.lineJoin = Graphics.JOIN_MITER; break;
+      case "round": this._state.lineJoin = Graphics.JOIN_ROUND; break;
+      case "bevel": this._state.lineJoin = Graphics.JOIN_BEVEL; break;
+      default:
+          throw "unknown lineJoin";
+      }
+  }
+}
+property lineCap(val) {
+  get
+  {
+      switch(this._state.lineCap)
+      {
+      case Graphics.CAP_BUTT: return "butt";
+      case Graphics.CAP_ROUND: return "round";
+      case Graphics.CAP_SQUARE: return "square";
+      default:
+          throw "unknown lineJoin";
+      }
+  }
+  set
+  {
+      switch(val)
+      {
+      case "butt": this._state.lineCap = Graphics.CAP_BUTT; break;
+      case "round": this._state.lineCap = Graphics.CAP_ROUND; break;
+      case "square": this._state.lineCap = Graphics.CAP_SQUARE; break;
+      default:
+          throw "unknown lineCap";
+      }
+  }
+}
+property textAlign(val) {
+  get
+  {
+      switch(this._state.textAlign)
+      {
+      case Graphics.ALIGN_START: return "left";
+      case Graphics.ALIGN_END: return "right";
+      case Graphics.ALIGN_CENTER: return "center";
+      default:
+          throw "unknown textAlign";
+      }
+  }
+  set
+  {
+      switch(val)
+      {
+      case "left": this._state.textAlign = Graphics.ALIGN_START; break;
+      case "right": this._state.textAlign = Graphics.ALIGN_END; break;
+      case "center": this._state.textAlign = Graphics.ALIGN_CENTER; break;
+      default:
+          throw "unknown textAlign";
+      }
+  }
+}
+property textBaseline(val) {
+  get
+  {
+      switch(this._state.textBaseline)
+      {
+      case Graphics.ALIGN_START: return "top";
+      case Graphics.ALIGN_END: return "bottom";
+      case Graphics.ALIGN_CENTER: return "middle";
+      default:
+          throw "unknown textBaseline";
+      }
+  }
+  set
+  {
+      switch(val)
+      {
+      case "top": this._state.textAlign = Graphics.ALIGN_START; break;
+      case "bottom": this._state.textAlign = Graphics.ALIGN_END; break;
+      case "middle": this._state.textAlign = Graphics.ALIGN_CENTER; break;
+      default:
+          throw "unknown textBaseline";
+      }
+  }
+}
+function save() {
+  if(!this._states) this._states = [];
+  this._states.push(this._state.clone(true));
+}
+function restore() {
+  if(!this._states || this._states.length == 0) return;
+  this._state = this._states.pop();
+}
+//transformation
+function setTransform(m11, m12, m21, m22, dx, dy) {
+  if(m11 === 1 && m12 === 0 && m21 === 0 &&
+      m22 === 1 && dx === 0 && dy === 0)
+  {
+      this._state.xform = null;
+      return;
+  }
+  this._state.xform = {
+      m11:m11,
+      m12:m12,
+      m21:m21,
+      m22:m22,
+      dx:dx,
+      dy:dy
+  };
+}
+function resetTransform() {
+  this._state.xform = null;
+}
+function scale(x, y) {
+  if(this._state.xform)
+  {
+      this._state.xform.m11 *= x;
+      this._state.xform.m12 *= x;
+      this._state.xform.m21 *= y;
+      this._state.xform.m22 *= y;
+  }
+  else
+  {
+      this.setTransform(x,0,0,y,0,0);
+  }
+}
+function translate(x, y) {
+  if(this._state.xform)
+  {
+      this._state.xform.dx += x * this._state.xform.m11 + y * this._state.xform.m21;
+      this._state.xform.dy += x * this._state.xform.m12 + y * this._state.xform.m22;
+  }
+  else
+  {
+      this.setTransform(1,0,0,1,x,y);
+  }
+}
+function rotate(angle) {
+  if(!this._state.xform)
+      this._state.xform = {m11:1,m12:0,m21:0,m22:1,dx:0,dy:0};
+  var sa = Math.sin(angle);
+  var ca = Math.cos(angle);
+  var m11 = ca * this._state.xform.m11 + sa * this._state.xform.m21;
+  var m12 = ca * this._state.xform.m12 + sa * this._state.xform.m22;
+  var m21 = -sa * this._state.xform.m11 + ca * this._state.xform.m21;
+  var m22 = -sa * this._state.xform.m12 + ca * this._state.xform.m22;
+  this._state.xform.m11 = m11;
+  this._state.xform.m12 = m12;
+  this._state.xform.m21 = m21;
+  this._state.xform.m22 = m22;
+}
+//path
+function beginPath() {
+  this._path = new Graphics.Path();
+}
+function moveTo(x,y) {
+  if(this._path)
+      this._path.moveTo(x,y);
+}
+function lineTo(x,y) {
+  if(this._path)
+      this._path.lineTo(x,y);
+}
+function rect(x, y, width, height) {
+  if(this._path)
+  {
+      this._path.moveTo(x, y);
+      this._path.lineTo(x + width, y);
+      this._path.lineTo(x + width, y + height);
+      this._path.lineTo(x, y + height);
+      this._path.lineTo(x, y);
+  }
+}
+function arc(x, y, radius, startAngle, endAngle, anticlockwise) {
+  throw "arc not supported!";
+  if(this._path)
+      this._path.arc(x, y, radius, startAngle, endAngle * (anticlockwise ? -1 : 1));
+}
+function arcTo(x1, y1, x2, y2, radius) {
+  if(this._path)
+      this._path.arcTo(x1, y1, x2, y2, radius);
+}
+function bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y) {
+  if(this._path)
+      this._path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
+}
+function quadraticCurveTo(cpx, cpy, x, y) {
+  if(this._path)
+      this._path.quadraticCurveTo(cpx, cpy, x, y);
+}
+function closePath() {
+  if(this._path)
+      this._path.close();
+}
+//paint
+function _prepaint(gfx,opts = {}) {
+  if(this._state.xform)
+  {
+      gfx.translate(this._state.xform.dx,this._state.xform.dy);
+      gfx.scale(this._state.xform.m11,this._state.xform.m22);
+      gfx.skew(-Math.atan(this._state.xform.m12) / Math.PI * 180,-Math.atan(this._state.xform.m21) / Math.PI * 180);
+  }
+  if(opts.fill)
+  {
+      if(this._state.fillStyle)
+          gfx.fillColor(this._state.fillStyle);
+  }
+  if(opts.stroke)
+  {
+      if(this._state.strokeStyle)
+          gfx.strokeColor(this._state.strokeStyle);
+      gfx.strokeWidth(this._state.lineWidth);
+      gfx.lineJoin = this._state.lineJoin;
+      gfx.lineCap = this._state.lineCap;
+  }
+}
+function fill() {
+  if(!this._path) return;
+  this._img.update(function(gfx){
+      this super._prepaint(gfx,{fill:true});
+      gfx.drawPath(this super._path);
+  });
+  //this._path = null;
+}
+function stroke() {
+  if(!this._path) return;
+  this._img.update(function(gfx){
+      this super._prepaint(gfx,{stroke:true});
+      gfx.drawPath(this super._path);
+  });
+  //this._path = null;
+}
+function clearRect(x, y, width, height) {
+  //erase by temp image...
+  var img = new Image(width,height,:gfx:{});
+  //compose dstX/dstY has no effect!
+  this._img.compose(img,#copy,x,y);
+  img.destroy();
+  img = null;
+}
+var __elFont = null;
+function measureText(text) {
+  var mtx = {};
+  if(!__elFont)
+  {
+      //ugly...
+      __elFont = new Element("div");
+      self.insert(__elFont);
+  }
+  __elFont.style.set({
+          font: this._state.font
+      });
+  this._img.update(function(gfx){
+      var txt = new Graphics.Text(text,__elFont);
+      var (maxWidth,minWidth,boxWidth) = txt.width();
+      txt = null;
+      mtx.width = maxWidth;
+  });
+  return mtx;
+}
+function fillText(text, x, y) {
+  if(!__elFont)
+  {
+      //ugly...
+      __elFont = new Element("div");
+      self.insert(__elFont);
+  }
+  __elFont.style.set({
+          font: this._state.font
+      });
+  this._img.update(function(gfx){
+      this super._prepaint(gfx,{fill:true});
+      var txt = new Graphics.Text(text,__elFont);
+      txt.alignment(this super._state.textAlign,this super._state.textBaseline);
+      gfx.drawText(txt,x,y);
+      txt = null;
+  });
+}
+function strokeText(text, x, y) {
+  if(!__elFont)
+  {
+      //ugly...
+      __elFont = new Element("div");
+      self.insert(__elFont);
+  }
+  __elFont.style.set({
+          font: this._state.font
+      });
+  this._img.update(function(gfx){
+      this super._prepaint(gfx,{stroke:true});
+      var txt = new Graphics.Text(text,__elFont);
+      txt.alignment(this super._state.textAlign,this super._state.textBaseline);
+      gfx.drawText(txt,x,y);
+      txt = null;
+  });
+}
+} //class CanvasRenderingContext2D
+  </script>
+  <body>
+
+  </body>
+</html>
